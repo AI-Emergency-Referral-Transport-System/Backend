@@ -1,10 +1,11 @@
 from django.urls import path
 from rest_framework_simplejwt.views import TokenRefreshView
-from .views import RegisterView, VerifyOTPView, UserProfileView
+
+from accounts.views import OTPRequestAPIView, OTPVerifyAPIView, ProfileRetrieveUpdateAPIView
 
 urlpatterns = [
-    path("register/", RegisterView.as_view(), name="register"),
-    path("verify-otp/", VerifyOTPView.as_view(), name="verify-otp"),
-    path("jwt/refresh/", TokenRefreshView.as_view(), name="token-refresh"),
-    path("profile/", UserProfileView.as_view(), name="user-profile"),
+    path("otp/request/", OTPRequestAPIView.as_view(), name="otp-request"),
+    path("otp/verify/", OTPVerifyAPIView.as_view(), name="otp-verify"),
+    path("token/refresh/", TokenRefreshView.as_view(), name="token-refresh"),
+    path("profile/", ProfileRetrieveUpdateAPIView.as_view(), name="profile"),
 ]

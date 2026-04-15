@@ -22,11 +22,11 @@ def env_list(key: str, default: list[str] | None = None) -> list[str]:
     return [item.strip() for item in value.split(",") if item.strip()]
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = env("DJANGO_SECRET_KEY", "temporary-secret-key-for-dev") # Added fallback for dev
+SECRET_KEY = env("DJANGO_SECRET_KEY")
 if not SECRET_KEY:
     raise ImproperlyConfigured("DJANGO_SECRET_KEY is required.")
 
-DEBUG = env_bool("DJANGO_DEBUG", True)
+DEBUG = env_bool("DJANGO_DEBUG", False)
 ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", ["localhost", "127.0.0.1", "0.0.0.0"])
 CSRF_TRUSTED_ORIGINS = env_list("DJANGO_CSRF_TRUSTED_ORIGINS", [])
 
@@ -139,7 +139,18 @@ SIMPLE_JWT = {
     "AUTH_HEADER_TYPES": ("Bearer",),
 }
 
-REDIS_URL = env("REDIS_URL", "redis://localhost:6379/0") # Changed 'redis' to 'localhost' for dev
+SMS_PROVIDER = (env("SMS_PROVIDER", "") or "").strip().lower()
+SMS_API_KEY = env("SMS_API_KEY", "")
+SMS_SENDER_ID = env("SMS_SENDER_ID", "")
+TWILIO_ACCOUNT_SID = env("TWILIO_ACCOUNT_SID", "")
+TWILIO_AUTH_TOKEN = env("TWILIO_AUTH_TOKEN", "")
+TWILIO_FROM_NUMBER = env("TWILIO_FROM_NUMBER", "")
+TWILIO_MESSAGING_SERVICE_SID = env("TWILIO_MESSAGING_SERVICE_SID", "")
+AFRICASTALKING_USERNAME = env("AFRICASTALKING_USERNAME", "")
+AFRICASTALKING_API_KEY = env("AFRICASTALKING_API_KEY", "")
+AFRICASTALKING_SENDER_ID = env("AFRICASTALKING_SENDER_ID", "")
+
+REDIS_URL = env("REDIS_URL", "redis://redis:6379/0")
 
 CACHES = {
     "default": {
