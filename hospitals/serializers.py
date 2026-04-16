@@ -12,12 +12,31 @@ class HospitalSerializer(serializers.ModelSerializer):
         fields = (
             "id",
             "name",
+            "phone",
             "admin",
             "location",
-            "capacity_total",
-            "capacity_available",
+            "available_beds",
+            "available_icu_beds",
+            "oxygen_level",
+            "has_cardiology",
+            "has_trauma",
             "is_available",
             "created_at",
             "updated_at",
         )
-        read_only_fields = ("id", "created_at", "updated_at")
+        read_only_fields = ("id", "admin", "created_at", "updated_at")
+
+
+class HospitalResourceUpdateSerializer(serializers.ModelSerializer):
+    """Used by hospital admins to update their resource/capacity status."""
+
+    class Meta:
+        model = Hospital
+        fields = (
+            "available_beds",
+            "available_icu_beds",
+            "oxygen_level",
+            "has_cardiology",
+            "has_trauma",
+            "is_available",
+        )
