@@ -1,79 +1,42 @@
-import secrets
-from datetime import timedelta
+import requests
 
-from django.db import transaction
-from django.utils import timezone
-from rest_framework.exceptions import PermissionDenied, ValidationError
+def send_sms(phone_number: str, message: str) -> bool:
+    """
+    Connects to AfroMessage to send real SMS to Ethio Telecom/Safaricom.
+    """
+    url = "https://api.afromessage.com/api/send"
+    
+    # ⚠️ Replace with your actual AfroMessage credentials
+    TOKEN = "YOUR_AFROMESSAGE_TOKEN_HERE" 
+    SENDER_ID = "YOUR_SENDER_ID_HERE" 
 
-from accounts.models import OTPCode, User
-from accounts.services.sms_service import send_sms
+    headers = {
+        'Authorization': f'Bearer {TOKEN}',
+        'Content-Type': 'application/json'
+    }
+    
+    payload = {
+        "to": phone_number,
+        "from": SENDER_ID,
+        "message": message
+    }
 
+    try:
+        # 10-second timeout so your app doesn't hang
+        response = requests.post(url, json=payload, headers=headers, timeout=10)
+        
+        if response.status_code == 200:
+            res_data = response.json()
+            if res_data.get('acknowledge') == 'success' or res_data.get('status') == 'success':
+                print(f"✅ SMS sent successfully to {phone_number}")
+                return True
+        
+        # If it fails, we print the error but don't crash the app
+        print(f"❌ AfroMessage Error: {response.status_code} - {response.text}")
+        return False
 
-class OTPService:
-    expiry_window = timedelta(minutes=5)
-    rate_limit_window = timedelta(minutes=10)
-    max_requests_per_window = 3
-
-    def request_otp(self, user: User) -> OTPCode:
-        if not user.is_active:
-            raise PermissionDenied("User account is inactive.")
-
-        self._enforce_rate_limit(user)
-        OTPCode.objects.filter(user=user, is_used=False).update(is_used=True)
-
-        raw_code = f"{secrets.randbelow(10**6):06d}"
-        otp = OTPCode(
-            user=user,
-            expires_at=timezone.now() + self.expiry_window,
-        )
-        otp.set_code(raw_code)
-        otp.save()
-
-        send_sms(
-            phone_number=user.phone_number,
-            message=f"Your verification code is: {raw_code}. It expires in 5 minutes.",
-        )
-        return otp
-
-    @transaction.atomic
-    def verify_otp(self, user: User, code: str) -> OTPCode:
-        if not user.is_active:
-            raise PermissionDenied("User account is inactive.")
-
-        otp = (
-            OTPCode.objects.select_for_update()
-            .filter(user=user, is_used=False)
-            .order_by("-created_at")
-            .first()
-        )
-
-        if otp is None:
-            raise ValidationError({"code": "Invalid or expired verification code."})
-
-        if otp.is_expired:
-            otp.is_used = True
-            otp.save(update_fields=["is_used"])
-            raise ValidationError({"code": "Invalid or expired verification code."})
-
-        if not otp.verify_code(code):
-            raise ValidationError({"code": "Invalid or expired verification code."})
-
-        otp.is_used = True
-        otp.save(update_fields=["is_used"])
-
-        if not user.is_verified:
-            user.is_verified = True
-            user.save(update_fields=["is_verified"])
-
-        return otp
-
-    def _enforce_rate_limit(self, user: User) -> None:
-        window_start = timezone.now() - self.rate_limit_window
-        recent_requests = OTPCode.objects.filter(
-            user=user,
-            created_at__gte=window_start,
-        ).count()
-        if recent_requests >= self.max_requests_per_window:
-            raise ValidationError(
-                {"phone_number": "Too many OTP requests. Please try again later."}
-            )
+    except Exception as e:
+        # Fallback print for hackathon testing
+        print(f"⚠️ SMS Gateway Connection Failed: {e}")
+        print(f"DEBUG ONLY: {message}") 
+        return False
