@@ -9,18 +9,7 @@ class Ambulance(TimestampedUUIDModel):
         BUSY = "busy", "Busy"
         OFFLINE = "offline", "Offline"
 
-    class VehicleType(models.TextChoices):
-        BASIC = "basic", "Basic"
-        ADVANCED = "advanced", "Advanced"
-        NEONATAL = "neonatal", "Neonatal"
-
     plate_number = models.CharField(max_length=20, unique=True) 
-    vehicle_type = models.CharField(
-        max_length=20, 
-        choices=VehicleType.choices, 
-        default=VehicleType.BASIC
-    )
-
     driver = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,

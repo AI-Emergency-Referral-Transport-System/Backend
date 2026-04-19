@@ -36,7 +36,7 @@ INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
-    # "django.contrib.gis",  <-- Keep this commented
+    "django.contrib.gis",  # <-- Keep this commented
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
@@ -44,12 +44,12 @@ INSTALLED_APPS = [
     "rest_framework_simplejwt",
     "channels",
     "accounts", # KEEP THIS ONE
+    "tracking",
     
     # COMMENT THESE OUT TEMPORARILY:
     # "emergencies",
     # "hospitals",
     # "ambulances",
-    # "tracking",
     # "ai",
 ]
 
@@ -83,25 +83,27 @@ TEMPLATES = [
 WSGI_APPLICATION = "config.wsgi.application"
 ASGI_APPLICATION = "config.asgi.application"
 
-# --- DATABASE LOGIC TO BYPASS GDAL ---
-if os.name == 'nt': # If running on Windows
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.sqlite3",
-            "NAME": BASE_DIR / "db.sqlite3",
-        }
+# Configure the Channel Layer (uses Redis to pass messages between users)
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            "hosts": [('127.0.0.1', 6379)],
+        },
+    },
+}
+
+
+DATABASES = {
+    "default": {
+        "ENGINE": env("POSTGRES_ENGINE", "django.contrib.gis.db.backends.postgis"),
+        "NAME": env("POSTGRES_DB", "ai_emergency"),
+        "USER": env("POSTGRES_USER", "postgres"),
+        "PASSWORD": env("POSTGRES_PASSWORD", "postgres"),
+        "HOST": env("POSTGRES_HOST", "db"),
+        "PORT": env("POSTGRES_PORT", "5432"),
     }
-else:
-    DATABASES = {
-        "default": {
-            "ENGINE": env("POSTGRES_ENGINE", "django.contrib.gis.db.backends.postgis"),
-            "NAME": env("POSTGRES_DB", "ai_emergency"),
-            "USER": env("POSTGRES_USER", "postgres"),
-            "PASSWORD": env("POSTGRES_PASSWORD", "postgres"),
-            "HOST": env("POSTGRES_HOST", "db"),
-            "PORT": env("POSTGRES_PORT", "5432"),
-        }
-    }
+}
 
 AUTH_PASSWORD_VALIDATORS = []
 
@@ -167,3 +169,6 @@ CHANNEL_LAYERS = {
         },
     }
 }
+
+GDAL_LIBRARY_PATH = r'C:\OSGeo4W\bin\gdal312.dll'
+GEOS_LIBRARY_PATH = r'C:\OSGeo4W\bin\geos_c.dll'
