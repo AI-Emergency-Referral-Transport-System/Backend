@@ -12,12 +12,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
 
 os.environ.setdefault(
-    "DJANGO_SETTINGS_MODULE",
-    os.getenv("DJANGO_SETTINGS_MODULE", "config.settings.dev"),
-)
+    "DJANGO_SETTINGS_MODULE", "config.settings"),
 
 django_asgi_app = get_asgi_application()
-
 
 
 application = ProtocolTypeRouter(

@@ -19,8 +19,8 @@ class CreateEmergencyAPIView(APIView):
     """
     Only Patients can trigger a new emergency request.
     """
-    permission_classes = [permissions.IsAuthenticated, RolePermission]
-    allowed_roles = {User.Role.PATIENT}
+    permission_classes = [permissions.AllowAny]
+    allowed_roles = {User.Role.DRIVER, User.Role.PATIENT}
 
     @transaction.atomic
     def post(self, request):
