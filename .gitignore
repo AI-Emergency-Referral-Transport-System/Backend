@@ -1,5 +1,6 @@
 .env
 .venv/
+venv/
 __pycache__/
 *.py[cod]
 *.sqlite3
@@ -13,3 +14,4 @@ dist/
 *.egg-info/
 .idea/
 .vscode/
+.deps
