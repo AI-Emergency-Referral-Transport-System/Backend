@@ -34,5 +34,3 @@ urlpatterns = [
     path('resources/one-tap/', views.AIOneTapCallView.as_view(), name='ai-one-tap'),
     path('user/profile/', views.AIUserProfileView.as_view(), name='ai-user-profile'),
 ]
---- a/file:///c%3A/Users/Ad/Backend/ai/views.py
-+++ b/file:///c%3A/Users/Ad/Backend/ai/views.py

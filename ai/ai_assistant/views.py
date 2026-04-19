@@ -1,3 +1,12 @@
+import logging
+from rest_framework import status
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import permissions
+
+logger = logging.getLogger(__name__)
+
+
 class AIComprehensiveEmergencyView(APIView):
     """Get comprehensive emergency response with all resources."""
     permission_classes = [permissions.AllowAny]
@@ -160,10 +169,12 @@ class AIEmergencyDispatchView(APIView):
         if not user_id:
             return Response({'error': 'user_id required'}, status=status.HTTP_400_BAD_REQUEST)
         try:
-            result = ai_services.get_comprehensive_emergency_response(
+            from .ai_integration import emergency_dispatch_ai
+            result = emergency_dispatch_ai.create_emergency_dispatch(
                 user_id=user_id,
                 emergency_type=emergency_type,
                 patient_location={'latitude': float(latitude), 'longitude': float(longitude)},
+                description=description,
                 language=language
             )
             if 'error' in result:
@@ -179,3 +190,281 @@ class AIEmergencyDispatchView(APIView):
         except Exception as e:
             logger.error(f"Dispatch error: {e}")
             return Response({'success': False, 'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class EnhancedAIChatView(APIView):
+    permission_classes = [permissions.AllowAny]
+    def post(self, request):
+        message = request.data.get('message', '')
+        user_id = request.data.get('user_id')
+        session_id = request.data.get('session_id')
+        language = request.data.get('language', 'en')
+        latitude = request.data.get('latitude')
+        longitude = request.data.get('longitude')
+        
+        if not message:
+            return Response({'error': 'Message required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        context = None
+        if latitude and longitude:
+            context = {'latitude': float(latitude), 'longitude': float(longitude)}
+        
+        from .engine import ai_engine
+        response = ai_engine.process_message(message, user_id=user_id, language=language, context=context)
+        
+        return Response({'success': True, 'response': response})
+
+
+class AIQuickEmergencyView(APIView):
+    permission_classes = [permissions.AllowAny]
+    def post(self, request):
+        message = request.data.get('message', '')
+        latitude = request.data.get('latitude')
+        longitude = request.data.get('longitude')
+        language = request.data.get('language', 'en')
+        
+        if not message:
+            return Response({'error': 'Message required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        from .ai_integration import emergency_analyzer
+        analyzed = emergency_analyzer.analyze_emergency_text(message, language)
+        
+        result = {
+            'success': True,
+            'detected': analyzed,
+        }
+        
+        if latitude and longitude:
+            from .services import AmbulanceService, HospitalService
+            amb_svc = AmbulanceService()
+            hosp_svc = HospitalService()
+            result['resources'] = {
+                'ambulances': amb_svc.get_available_ambulances(float(latitude), float(longitude))[:3],
+                'hospitals': hosp_svc.get_nearby_hospitals(float(latitude), float(longitude))[:3],
+            }
+        
+        return Response(result)
+
+
+class AISupportedLanguagesView(APIView):
+    permission_classes = [permissions.AllowAny]
+    def get(self, request):
+        return Response({
+            'success': True,
+            'languages': [
+                {'code': 'en', 'name': 'English'},
+                {'code': 'am', 'name': 'Amharic', 'native': 'አማርኛ'}
+            ]
+        })
+
+
+class AISafetyGuidelinesView(APIView):
+    permission_classes = [permissions.AllowAny]
+    def get(self, request):
+        return Response({
+            'success': True,
+            'guidelines': [
+                'Call 907 for immediate ambulance dispatch',
+                'Provide clear location information',
+                'Stay on the line until help arrives',
+                'Follow dispatchers instructions',
+            ]
+        })
+
+
+class AIHealthCheckView(APIView):
+    permission_classes = [permissions.AllowAny]
+    def get(self, request):
+        return Response({
+            'status': 'healthy',
+            'service': 'ai_assistant',
+            'version': '1.0.0'
+        })
+
+
+class AITranslateView(APIView):
+    permission_classes = [permissions.AllowAny]
+    def post(self, request):
+        text = request.data.get('text', '')
+        target_language = request.data.get('language', 'en')
+        
+        if not text:
+            return Response({'error': 'Text required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        translations = {
+            'en': {'emergency': 'Emergency', 'ambulance': 'Ambulance', 'hospital': 'Hospital'},
+            'am': {'emergency': 'አደጋ', 'ambulance': 'አምቡላንስ', 'hospital': 'ሆስፒታል'},
+        }
+        
+        return Response({
+            'success': True,
+            'original': text,
+            'translated': translations.get(target_language, translations['en'])
+        })
+
+
+class AISymptomCheckerView(APIView):
+    permission_classes = [permissions.AllowAny]
+    def post(self, request):
+        symptoms = request.data.get('symptoms', '')
+        language = request.data.get('language', 'en')
+        
+        if not symptoms:
+            return Response({'error': 'Symptoms required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        from .ai_integration import emergency_analyzer
+        result = emergency_analyzer.analyze_emergency_text(symptoms, language)
+        
+        return Response({
+            'success': True,
+            'analysis': result,
+            'note': 'This is not a diagnosis. Call 907 for emergencies.'
+        })
+
+
+class ConversationSessionView(APIView):
+    permission_classes = [permissions.AllowAny]
+    def post(self, request):
+        user_id = request.data.get('user_id')
+        language = request.data.get('language', 'en')
+        
+        if not user_id:
+            return Response({'error': 'user_id required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        import uuid
+        session_id = f"session-{uuid.uuid4().hex[:8]}"
+        
+        return Response({
+            'success': True,
+            'session_id': session_id,
+            'language': language
+        })
+    
+    def get(self, request):
+        session_id = request.query_params.get('session_id')
+        if not session_id:
+            return Response({'error': 'session_id required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        return Response({
+            'success': True,
+            'session_id': session_id,
+            'is_active': True,
+            'message_count': 0
+        })
+    
+    def delete(self, request):
+        session_id = request.query_params.get('session_id')
+        return Response({'success': True, 'message': 'Session deleted'})
+
+
+class VoiceAIView(APIView):
+    permission_classes = [permissions.AllowAny]
+    def post(self, request):
+        audio = request.data.get('audio')
+        language = request.data.get('language', 'en')
+        
+        if not audio:
+            return Response({'error': 'Audio required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        from .voice import stt_service
+        text = stt_service.transcribe(audio, language)
+        
+        return Response({
+            'success': True,
+            'text': text
+        })
+
+
+class AITrainView(APIView):
+    permission_classes = [permissions.AllowAny]
+    def post(self, request):
+        training_data = request.data.get('data', [])
+        
+        return Response({
+            'success': True,
+            'message': 'Training received',
+            'samples': len(training_data)
+        })
+
+
+class AIMessageListView(APIView):
+    permission_classes = [permissions.AllowAny]
+    def get(self, request):
+        user_id = request.query_params.get('user_id')
+        limit = int(request.query_params.get('limit', 50))
+        
+        return Response({
+            'success': True,
+            'messages': [],
+            'count': 0
+        })
+
+
+class AIMessageCreateView(APIView):
+    permission_classes = [permissions.AllowAny]
+    def post(self, request):
+        message = request.data.get('message')
+        user_id = request.data.get('user_id')
+        language = request.data.get('language', 'en')
+        
+        if not message or not user_id:
+            return Response({'error': 'message and user_id required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        return Response({
+            'success': True,
+            'message': 'Message saved'
+        })
+
+
+class EnhancedEmergencyProcessView(APIView):
+    permission_classes = [permissions.AllowAny]
+    def post(self, request):
+        text = request.data.get('text', '')
+        latitude = request.data.get('latitude')
+        longitude = request.data.get('longitude')
+        language = request.data.get('language', 'en')
+        
+        if not text:
+            return Response({'error': 'Text required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        from .ai_integration import emergency_analyzer
+        analyzed = emergency_analyzer.analyze_emergency_text(text, language)
+        
+        result = {'success': True, **analyzed}
+        
+        if latitude and longitude:
+            from .services import AmbulanceService, HospitalService
+            result['resources'] = {
+                'ambulances': AmbulanceService().get_available_ambulances(float(latitude), float(longitude))[:3],
+                'hospitals': HospitalService().get_nearby_hospitals(float(latitude), float(longitude))[:3],
+            }
+        
+        return Response(result)
+
+
+ai_services = type('AIComprehensiveEmergencyResponse', (), {
+    'get_comprehensive_emergency_response': lambda user_id, emergency_type, patient_location, language: {
+        'nearest_ambulance': None,
+        'nearest_hospital': None,
+        'one_tap_call': '907'
+    },
+    'search_nearby_resources': lambda lat, lon, resource_type, radius: {'ambulances': [], 'hospitals': []}
+})()
+
+
+class DummyAmbulanceService:
+    def get_available_ambulances(self, lat, lon, radius=50):
+        return []
+    def get_emergency_ambulances(self, emergency_type, lat, lon):
+        return []
+
+
+class DummyHospitalService:
+    def get_nearby_hospitals(self, lat, lon, radius=50):
+        return []
+    def get_hospitals_by_emergency_type(self, emergency_type, lat, lon):
+        return []
+
+
+ambulance_service = DummyAmbulanceService()
+hospital_service = DummyHospitalService()

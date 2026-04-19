@@ -1,6 +1,6 @@
 
 from rest_framework import serializers
-from .models import AIMessage, AIConversationSession
+from ...accounts.models import AIMessage, AIConversationSession
 class AIMessageSerializer(serializers.ModelSerializer):
     class Meta:
         model = AIMessage
