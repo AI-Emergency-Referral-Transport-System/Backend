@@ -2,10 +2,10 @@ from django.contrib.auth.hashers import check_password, make_password
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 from django.db import models
 from django.utils import timezone
+from datetime import timedelta
 
 from accounts.managers import UserManager
 from common.models import TimestampedUUIDModel
-
 
 class User(TimestampedUUIDModel, AbstractBaseUser, PermissionsMixin):
     class Role(models.TextChoices):
@@ -20,6 +20,9 @@ class User(TimestampedUUIDModel, AbstractBaseUser, PermissionsMixin):
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     date_joined = models.DateTimeField(default=timezone.now)
+
+    # Useful for rate-limiting SMS
+    last_otp_sent = models.DateTimeField(null=True, blank=True)
 
     USERNAME_FIELD = "phone_number"
     REQUIRED_FIELDS: list[str] = []
@@ -49,7 +52,7 @@ class Profile(TimestampedUUIDModel):
 
 class OTPCode(TimestampedUUIDModel):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="otp_codes")
-    code = models.CharField(max_length=255)
+    code = models.CharField(max_length=255) # Hashed
     expires_at = models.DateTimeField()
     is_used = models.BooleanField(default=False)
 
@@ -61,7 +64,9 @@ class OTPCode(TimestampedUUIDModel):
         return timezone.now() >= self.expires_at
 
     def set_code(self, raw_code: str) -> None:
+        """Hashes the OTP code before saving."""
         self.code = make_password(raw_code)
 
     def verify_code(self, raw_code: str) -> bool:
+        """Checks raw OTP against hashed code."""
         return check_password(raw_code, self.code)

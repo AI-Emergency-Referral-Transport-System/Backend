@@ -14,11 +14,32 @@ from accounts.serializers import (
 )
 from accounts.services.otp_service import OTPService
 
-
 User = get_user_model()
+
+class AuthRootAPIView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request, *args, **kwargs):
+        return response.Response(
+            {
+                "message": "Auth API is available.",
+                "endpoints": {
+                    "signup": "/api/v1/auth/signup/",
+                    "otp_request": "/api/v1/auth/otp/request/",
+                    "otp_verify": "/api/v1/auth/otp/verify/",
+                    "token_refresh": "/api/v1/auth/token/refresh/",
+                    "profile": "/api/v1/auth/profile/",
+                },
+            },
+            status=status.HTTP_200_OK,
+        )
 
 
 class OTPRequestAPIView(APIView):
+    """
+    Handles Signup and Login by creating a user (if they don't exist) 
+    and sending a hashed OTP via the configured SMS provider.
+    """
     permission_classes = [permissions.AllowAny]
 
     def post(self, request, *args, **kwargs):
@@ -29,7 +50,9 @@ class OTPRequestAPIView(APIView):
             phone_number=serializer.validated_data["phone_number"],
             defaults={"role": User.Role.PATIENT},
         )
+
         Profile.objects.get_or_create(user=user)
+
         OTPService().request_otp(user)
 
         return response.Response(
@@ -39,20 +62,27 @@ class OTPRequestAPIView(APIView):
 
 
 class OTPVerifyAPIView(APIView):
+    """
+    Verifies the OTP and returns JWT Access/Refresh tokens along with user info.
+    """
     permission_classes = [permissions.AllowAny]
 
     def post(self, request, *args, **kwargs):
         serializer = OTPVerifySerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        user = User.objects.filter(phone_number=serializer.validated_data["phone_number"]).first()
+        phone = serializer.validated_data["phone_number"]
+        code = serializer.validated_data["code"]
+
+        user = User.objects.filter(phone_number=phone).first()
         if user is None:
             raise ValidationError({"code": "Invalid or expired verification code."})
 
-        OTPService().verify_otp(user=user, code=serializer.validated_data["code"])
-        profile, _ = Profile.objects.get_or_create(user=user)
+        OTPService().verify_otp(user=user, code=code)
 
+        profile, _ = Profile.objects.get_or_create(user=user)
         refresh = RefreshToken.for_user(user)
+        
         return response.Response(
             {
                 "refresh": str(refresh),
@@ -65,8 +95,13 @@ class OTPVerifyAPIView(APIView):
 
 
 class ProfileRetrieveUpdateAPIView(generics.RetrieveUpdateAPIView):
+    """
+    Allows authenticated users to view or update their specific profile.
+    """
     permission_classes = [permissions.IsAuthenticated, RolePermission]
     serializer_class = ProfileSerializer
+    
+    # These roles are allowed to access this view based on RolePermission
     allowed_roles = {
         User.Role.PATIENT,
         User.Role.DRIVER,
@@ -74,5 +109,6 @@ class ProfileRetrieveUpdateAPIView(generics.RetrieveUpdateAPIView):
     }
 
     def get_object(self):
+        # Always return the profile of the logged-in user
         profile, _ = Profile.objects.get_or_create(user=self.request.user)
         return profile
