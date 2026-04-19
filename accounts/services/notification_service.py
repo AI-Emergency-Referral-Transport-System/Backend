@@ -1,3 +1,5 @@
+import os
+
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 from django.core.mail import send_mail
@@ -10,8 +12,32 @@ def _print_otp(phone_number: str, otp_code: str) -> None:
     print(f"[OTP DEBUG] {phone_number}: {otp_code}")
 
 
+def _string_setting(name: str, default: str = "") -> str:
+    value = getattr(settings, name, None)
+    if value in (None, ""):
+        value = os.getenv(name, default)
+    return value
+
+
+def _bool_setting(name: str, default: bool = False) -> bool:
+    value = getattr(settings, name, None)
+    if value is None:
+        raw = os.getenv(name)
+        if raw is None:
+            return default
+        return raw.strip().lower() == "true"
+    if isinstance(value, bool):
+        return value
+    return str(value).strip().lower() == "true"
+
+
 def send_otp_notification(user, otp_code: str) -> None:
-    backend = getattr(settings, "OTP_DELIVERY_BACKEND", "console").strip().lower()
+    configured_backend = _string_setting("OTP_DELIVERY_BACKEND", "").strip().lower()
+    if configured_backend:
+        backend = configured_backend
+    else:
+        backend = "sms" if _string_setting("SMS_PROVIDER", "").strip() else "console"
+
     message = f"Your verification code is: {otp_code}. It expires in 5 minutes."
 
     if backend == "console":
@@ -22,7 +48,7 @@ def send_otp_notification(user, otp_code: str) -> None:
         if not user.phone_number:
             raise ValidationError({"phone_number": "Phone number is required for SMS OTP delivery."})
         send_sms(phone_number=user.phone_number, message=message)
-        if getattr(settings, "OTP_DEBUG_OUTPUT", False):
+        if _bool_setting("OTP_DEBUG_OUTPUT", False):
             _print_otp(user.phone_number, otp_code)
         return
 
@@ -36,7 +62,7 @@ def send_otp_notification(user, otp_code: str) -> None:
             recipient_list=[user.email],
             fail_silently=False,
         )
-        if getattr(settings, "OTP_DEBUG_OUTPUT", False):
+        if _bool_setting("OTP_DEBUG_OUTPUT", False):
             _print_otp(user.phone_number, otp_code)
         return
 
