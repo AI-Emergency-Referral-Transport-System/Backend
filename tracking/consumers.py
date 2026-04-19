@@ -30,14 +30,11 @@ class AmbulanceTrackingConsumer(AsyncWebsocketConsumer):
         lon = data.get('lon')
         heading = data.get('heading', 0)
 
-        # UPDATE THE DATABASE (Sync operation)
-        await self.update_ambulance_location(lat, lon)
-
         if lat and lon:
-            # 1. Update the database (Save history in Location_Track)
-            await self.record_movement(lat, lon)
+            # UPDATE THE DATABASE (Sync operation)
+            await self.update_ambulance_location(lat, lon)
 
-            # 2. Broadcast the update to the PATIENT and HOSPITAL apps in the group
+            # Broadcast the update to the PATIENT and HOSPITAL apps in the group
             await self.channel_layer.group_send(
                 self.room_group_name,
                 {
