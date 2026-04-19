@@ -20,7 +20,7 @@ class CreateEmergencyAPIView(APIView):
     Only Patients can trigger a new emergency request.
     """
     permission_classes = [permissions.IsAuthenticated, RolePermission]
-    allowed_roles = {User.Role.DRIVER, User.Role.PATIENT}
+    allowed_roles = {User.Role.PATIENT}
 
     @transaction.atomic
     def post(self, request, hospital_id):
@@ -80,6 +80,7 @@ class AcceptEmergencyAPIView(APIView):
     def post(self, request, ambulance_id, emergency_id):
         # select_for_update prevents race conditions
         emergency = Emergency.objects.select_for_update().get(id=emergency_id)
+        emergency_data = EmergencySerializer(emergency).data
 
         if emergency.assigned_ambulance is not None:
             return Response({"error": "Already accepted by another driver."}, status=status.HTTP_400_BAD_REQUEST)
@@ -112,52 +113,9 @@ class AcceptEmergencyAPIView(APIView):
             "status": "success",
             "patient_lat": emergency.patient_location.y,
             "patient_lon": emergency.patient_location.x,
+            "emergency_data": emergency_data, # Send the full serialized data for convenience
         })
-    
-class AcceptEmergencyAPIView(APIView):
-    """
-    Only Drivers can accept an emergency.
-    """
-    permission_classes = [permissions.IsAuthenticated, RolePermission]
-    allowed_roles = {User.Role.DRIVER}
 
-    @transaction.atomic
-    def post(self, request, ambulance_id, emergency_id):
-        # select_for_update prevents race conditions
-        emergency = Emergency.objects.select_for_update().get(id=emergency_id)
-
-        if emergency.assigned_ambulance is not None:
-            return Response({"error": "Already accepted by another driver."}, status=status.HTTP_400_BAD_REQUEST)
-
-        ambulance = Ambulance.objects.get(id=ambulance_id)
-        
-        # Verify the driver owns this ambulance record
-        # (Optional: check if ambulance.driver == request.user)
-
-        emergency.assigned_ambulance = ambulance
-        emergency.status = 'accepted'
-        emergency.save()
-
-        ambulance.status = 'on_duty'
-        ambulance.save()
-
-        # Notify the patient room
-        channel_layer = get_channel_layer()
-        async_to_sync(channel_layer.group_send)(
-            f"emergency_{emergency_id}",
-            {
-                "type": "assignment_notification",
-                "ambulance_id": ambulance.id,
-                "plate_number": ambulance.plate_number,
-                "status": "Ambulance En Route"
-            }
-        )
-
-        return Response({
-            "status": "success",
-            "patient_lat": emergency.patient_location.y,
-            "patient_lon": emergency.patient_location.x,
-        })
     
 class PickupPatientAPIView(APIView):
     """
