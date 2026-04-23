@@ -113,13 +113,24 @@ CHANNEL_LAYERS = {
     },
 }
 
-# --- 6. SMS CONFIG ---
+# --- 6. OTP DELIVERY CONFIG ---
 SMS_PROVIDER = os.environ.get("SMS_PROVIDER", "console")
 AFROMESSAGE_API_KEY = os.environ.get("AFROMESSAGE_API_KEY", "")
 AFROMESSAGE_SENDER_ID = os.environ.get("AFROMESSAGE_SENDER_ID", "")
 TWILIO_ACCOUNT_SID = os.environ.get("TWILIO_ACCOUNT_SID", "")
 TWILIO_AUTH_TOKEN = os.environ.get("TWILIO_AUTH_TOKEN", "")
 TWILIO_FROM_NUMBER = os.environ.get("TWILIO_FROM_NUMBER", "")
+EMAIL_BACKEND = os.environ.get(
+    "EMAIL_BACKEND",
+    "django.core.mail.backends.console.EmailBackend",
+)
+DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "no-reply@ai-emergency.local")
+EMAIL_HOST = os.environ.get("EMAIL_HOST", "localhost")
+EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "25"))
+EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
+EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "").lower() in {"1", "true", "yes", "on"}
+EMAIL_USE_SSL = os.environ.get("EMAIL_USE_SSL", "").lower() in {"1", "true", "yes", "on"}
 
 # --- 7. MIDDLEWARE ---
 MIDDLEWARE = [

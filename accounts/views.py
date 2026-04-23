@@ -37,8 +37,8 @@ class AuthRootAPIView(APIView):
 
 class OTPRequestAPIView(APIView):
     """
-    Handles Signup and Login by creating a user (if they don't exist) 
-    and sending a hashed OTP via the configured SMS provider.
+    Handles signup and login by creating a user (if needed)
+    and sending a hashed OTP to their email address.
     """
     permission_classes = [permissions.AllowAny]
 
@@ -47,7 +47,7 @@ class OTPRequestAPIView(APIView):
         serializer.is_valid(raise_exception=True)
 
         user, _ = User.objects.get_or_create(
-            phone_number=serializer.validated_data["phone_number"],
+            email=serializer.validated_data["email"],
             defaults={"role": User.Role.PATIENT},
         )
 
@@ -71,10 +71,10 @@ class OTPVerifyAPIView(APIView):
         serializer = OTPVerifySerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        phone = serializer.validated_data["phone_number"]
+        email = serializer.validated_data["email"]
         code = serializer.validated_data["code"]
 
-        user = User.objects.filter(phone_number=phone).first()
+        user = User.objects.filter(email=email).first()
         if user is None:
             raise ValidationError({"code": "Invalid or expired verification code."})
 

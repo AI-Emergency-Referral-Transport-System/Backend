@@ -13,18 +13,18 @@ class User(TimestampedUUIDModel, AbstractBaseUser, PermissionsMixin):
         DRIVER = "driver", "Driver"
         HOSPITAL_ADMIN = "hospital_admin", "Hospital Admin"
 
-    phone_number = models.CharField(max_length=32, unique=True)
-    email = models.EmailField(blank=True)
+    phone_number = models.CharField(max_length=32, unique=True, null=True, blank=True)
+    email = models.EmailField(unique=True, null=True, blank=True)
     role = models.CharField(max_length=32, choices=Role.choices, default=Role.PATIENT)
     is_verified = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     date_joined = models.DateTimeField(default=timezone.now)
 
-    # Useful for rate-limiting SMS
+    # Useful for rate-limiting OTP delivery
     last_otp_sent = models.DateTimeField(null=True, blank=True)
 
-    USERNAME_FIELD = "phone_number"
+    USERNAME_FIELD = "email"
     REQUIRED_FIELDS: list[str] = []
 
     objects = UserManager()
@@ -33,7 +33,7 @@ class User(TimestampedUUIDModel, AbstractBaseUser, PermissionsMixin):
         ordering = ["-date_joined"]
 
     def __str__(self) -> str:
-        return f"{self.phone_number} ({self.role})"
+        return f"{self.email or self.phone_number or self.pk} ({self.role})"
 
 
 class Profile(TimestampedUUIDModel):
@@ -47,7 +47,7 @@ class Profile(TimestampedUUIDModel):
         ordering = ["user__phone_number"]
 
     def __str__(self) -> str:
-        return f"Profile<{self.user.phone_number}>"
+        return f"Profile<{self.user.email or self.user.phone_number or self.user_id}>"
 
 
 class OTPCode(TimestampedUUIDModel):

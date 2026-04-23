@@ -6,7 +6,7 @@ from django.utils import timezone
 from rest_framework.exceptions import PermissionDenied, ValidationError
 
 from accounts.models import OTPCode, User
-from accounts.services.sms_service import send_sms
+from accounts.services.email_service import send_otp_email
 
 
 class OTPService:
@@ -17,6 +17,8 @@ class OTPService:
     def request_otp(self, user: User) -> OTPCode:
         if not user.is_active:
             raise PermissionDenied("User account is inactive.")
+        if not user.email:
+            raise ValidationError({"email": "A verified email address is required."})
 
         self._enforce_rate_limit(user)
         
@@ -35,10 +37,7 @@ class OTPService:
         otp.set_code(raw_code)
         otp.save()
 
-        send_sms(
-            phone_number=user.phone_number,
-            message=f"Your verification code is: {raw_code}. It expires in 5 minutes.",
-        )
+        send_otp_email(email=user.email, code=raw_code)
         
         # Update user's last sent timestamp (matches the model update we did)
         user.last_otp_sent = timezone.now()
@@ -89,5 +88,5 @@ class OTPService:
         
         if recent_requests >= self.max_requests_per_window:
             raise ValidationError(
-                {"phone_number": "Too many OTP requests. Please try again later."}
+                {"email": "Too many OTP requests. Please try again later."}
             )
