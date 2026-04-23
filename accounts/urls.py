@@ -1,15 +1,8 @@
 from django.urls import path
 from rest_framework_simplejwt.views import TokenRefreshView
 
-from accounts.views import (
-    AuthRootAPIView,
-    OTPRequestAPIView, 
-    OTPVerifyAPIView, 
-    ProfileRetrieveUpdateAPIView
-)
-
-# It is good practice to define an app_name for namespacing
-app_name = "accounts"
+from accounts.profiles.views import ProfileRetrieveUpdateAPIView
+from accounts.views import OTPRequestAPIView, OTPVerifyAPIView
 
 urlpatterns = [
     path("", AuthRootAPIView.as_view(), name="auth-root"),

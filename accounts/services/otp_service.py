@@ -1,12 +1,13 @@
 import secrets
 from datetime import timedelta
 
+from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 from rest_framework.exceptions import PermissionDenied, ValidationError
 
 from accounts.models import OTPCode, User
-from accounts.services.sms_service import send_sms
+from accounts.services.notification_service import send_otp_notification
 
 
 class OTPService:

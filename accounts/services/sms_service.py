@@ -1,3 +1,4 @@
+import os
 import logging
 import requests
 from abc import ABC, abstractmethod
@@ -6,6 +7,14 @@ from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 
 logger = logging.getLogger(__name__)
+
+
+def _setting(name: str, default: str = "") -> str:
+    value = getattr(settings, name, None)
+    if value in (None, ""):
+        value = os.getenv(name, default)
+    return value
+
 
 class BaseSMSProvider(ABC):
     @abstractmethod
@@ -69,8 +78,49 @@ class TwilioSMSProvider(BaseSMSProvider):
         logger.info("Twilio SMS to %s: %s", phone_number, message)
         print(f"DEBUG Twilio SMS to {phone_number}: {message}")
 
+class AfroMessageSMSProvider(BaseSMSProvider):
+    def __init__(
+        self,
+        token: str,
+        from_name: str = "",
+        sender_id: str = "",
+        callback_url: str = "",
+    ):
+        self.token = token
+        self.from_name = from_name
+        self.sender_id = sender_id
+        self.callback_url = callback_url
+
+        if not self.token:
+            raise ImproperlyConfigured("AfroMessage requires AFROMESSAGE_TOKEN.")
+
+    def send_sms(self, phone_number: str, message: str) -> None:
+        try:
+            from afromessage import AfroMessage
+            from afromessage.models.sms_models import SendSMSRequest
+        except ImportError as exc:
+            raise ImproperlyConfigured(
+                "AfroMessage support requires the 'afromessage' package to be installed."
+            ) from exc
+
+        client = AfroMessage(token=self.token)
+        payload = {
+            "to": phone_number,
+            "message": message,
+        }
+        if self.from_name:
+            payload["from_"] = self.from_name
+        if self.sender_id:
+            payload["sender"] = self.sender_id
+        if self.callback_url:
+            payload["callback"] = self.callback_url
+
+        request = SendSMSRequest(**payload)
+        client.sms.send(request)
+
+
 def get_sms_provider() -> BaseSMSProvider:
-    provider_name = getattr(settings, "SMS_PROVIDER", "")
+    provider_name = _setting("SMS_PROVIDER", "").strip().lower()
 
     if provider_name == "console":
         return ConsoleSMSProvider()
@@ -87,6 +137,20 @@ def get_sms_provider() -> BaseSMSProvider:
             account_sid=settings.TWILIO_ACCOUNT_SID,
             auth_token=settings.TWILIO_AUTH_TOKEN,
             from_number=settings.TWILIO_FROM_NUMBER,
+            messaging_service_sid=settings.TWILIO_MESSAGING_SERVICE_SID,
+        )
+    if provider_name in {"africas_talking", "africastalking"}:
+        return AfricasTalkingSMSProvider(
+            username=_setting("AFRICASTALKING_USERNAME"),
+            api_key=_setting("AFRICASTALKING_API_KEY") or _setting("SMS_API_KEY"),
+            sender_id=_setting("AFRICASTALKING_SENDER_ID") or _setting("SMS_SENDER_ID"),
+        )
+    if provider_name in {"afromessage", "afro_message"}:
+        return AfroMessageSMSProvider(
+            token=_setting("AFROMESSAGE_TOKEN"),
+            from_name=_setting("AFROMESSAGE_FROM"),
+            sender_id=_setting("AFROMESSAGE_SENDER_ID") or _setting("SMS_SENDER_ID"),
+            callback_url=_setting("AFROMESSAGE_CALLBACK_URL"),
         )
 
     if not provider_name:
