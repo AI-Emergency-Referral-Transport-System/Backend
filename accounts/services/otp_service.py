@@ -35,7 +35,6 @@ class OTPService:
 
         user.last_otp_sent = timezone.now()
         user.save(update_fields=["last_otp_sent"])
-
         return otp
 
     @transaction.atomic

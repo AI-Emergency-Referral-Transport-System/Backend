@@ -7,7 +7,6 @@ from accounts.views import AuthRootAPIView, OTPRequestAPIView, OTPVerifyAPIView
 
 app_name = "accounts"
 
-
 urlpatterns = [
     path("", AuthRootAPIView.as_view(), name="auth-root"),
     path("signup/", OTPRequestAPIView.as_view(), name="signup"),
