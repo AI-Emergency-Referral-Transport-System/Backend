@@ -30,7 +30,7 @@ class ProfileUserSerializer(serializers.ModelSerializer):
 class DriverProfileSerializer(serializers.ModelSerializer):
     name = serializers.CharField(source="user.profile.full_name", read_only=True)
     email = serializers.EmailField(source="user.email", read_only=True)
-    phone = serializers.CharField(source="user.phone_number", read_only=True)
+    phone = serializers.CharField(source="user.phone_number", read_only=True, allow_null=True)
 
     class Meta:
         model = DriverProfile
@@ -52,7 +52,7 @@ class DriverProfileSerializer(serializers.ModelSerializer):
 
 class HospitalProfileSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(source="user.email", read_only=True)
-    phone = serializers.CharField(source="user.phone_number", read_only=True)
+    phone = serializers.CharField(source="user.phone_number", read_only=True, allow_null=True)
     services = serializers.ListField(
         child=serializers.CharField(max_length=128),
         required=False,

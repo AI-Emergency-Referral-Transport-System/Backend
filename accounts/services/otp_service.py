@@ -18,6 +18,8 @@ class OTPService:
     def request_otp(self, user: User) -> OTPCode:
         if not user.is_active:
             raise PermissionDenied("User account is inactive.")
+        if not user.email:
+            raise ValidationError({"email": "Email is required for OTP delivery."})
 
         self._enforce_rate_limit(user)
         OTPCode.objects.filter(user=user, is_used=False).update(is_used=True)
@@ -32,11 +34,11 @@ class OTPService:
 
         send_otp_notification(user=user, otp_code=raw_code)
         if settings.DEBUG and getattr(settings, "OTP_DEBUG_OUTPUT", True):
-            print(f"[OTP DEBUG] {user.phone_number}: {raw_code}")
+            print(f"[OTP DEBUG] {user.email}: {raw_code}")
         return otp
 
     @transaction.atomic
-    def verify_otp(self, user: User, code: str) -> OTPCode:
+    def verify_otp(self, user: User, code: str) -> bool:
         if not user.is_active:
             raise PermissionDenied("User account is inactive.")
 
@@ -65,7 +67,7 @@ class OTPService:
             user.is_verified = True
             user.save(update_fields=["is_verified"])
 
-        return otp
+        return True
 
     def _enforce_rate_limit(self, user: User) -> None:
         window_start = timezone.now() - self.rate_limit_window
@@ -75,5 +77,5 @@ class OTPService:
         ).count()
         if recent_requests >= self.max_requests_per_window:
             raise ValidationError(
-                {"phone_number": "Too many OTP requests. Please try again later."}
+                {"email": "Too many OTP requests. Please try again later."}
             )

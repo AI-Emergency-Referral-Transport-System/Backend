@@ -14,15 +14,15 @@ class User(TimestampedUUIDModel, AbstractBaseUser, PermissionsMixin):
         DRIVER = "driver", "Driver"
         HOSPITAL_ADMIN = "hospital_admin", "Hospital Admin"
 
-    phone_number = models.CharField(max_length=32, unique=True)
-    email = models.EmailField(blank=True)
+    email = models.EmailField(unique=True)
+    phone_number = models.CharField(max_length=32, unique=True, null=True, blank=True)
     role = models.CharField(max_length=32, choices=Role.choices, default=Role.PATIENT)
     is_verified = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     date_joined = models.DateTimeField(default=timezone.now)
 
-    USERNAME_FIELD = "phone_number"
+    USERNAME_FIELD = "email"
     REQUIRED_FIELDS: list[str] = []
 
     objects = UserManager()
@@ -31,7 +31,7 @@ class User(TimestampedUUIDModel, AbstractBaseUser, PermissionsMixin):
         ordering = ["-date_joined"]
 
     def __str__(self) -> str:
-        return f"{self.phone_number} ({self.role})"
+        return f"{self.email} ({self.role})"
 
     @property
     def safe_driver_profile(self):
@@ -77,7 +77,7 @@ class Profile(TimestampedUUIDModel):
         ordering = ["user__phone_number"]
 
     def __str__(self) -> str:
-        return f"Profile<{self.user.phone_number}>"
+        return f"Profile<{self.user.email}>"
 
     @property
     def driver_profile(self):
@@ -123,7 +123,7 @@ class DriverProfile(TimestampedUUIDModel):
         ordering = ["user__phone_number"]
 
     def __str__(self) -> str:
-        return f"DriverProfile<{self.user.phone_number}>"
+        return f"DriverProfile<{self.user.email}>"
 
 
 class HospitalProfile(TimestampedUUIDModel):
@@ -164,7 +164,7 @@ class HospitalProfile(TimestampedUUIDModel):
         ordering = ["hospital_name", "user__phone_number"]
 
     def __str__(self) -> str:
-        return f"HospitalProfile<{self.user.phone_number}>"
+        return f"HospitalProfile<{self.user.email}>"
 
 
 class OTPCode(TimestampedUUIDModel):

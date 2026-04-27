@@ -21,7 +21,7 @@ class OTPRequestAPIView(APIView):
         serializer.is_valid(raise_exception=True)
 
         user, _ = User.objects.get_or_create(
-            phone_number=serializer.validated_data["phone_number"],
+            email=serializer.validated_data["email"],
             defaults={"role": User.Role.PATIENT},
         )
         ensure_profile_bundle(user)
@@ -40,7 +40,7 @@ class OTPVerifyAPIView(APIView):
         serializer = OTPVerifySerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        user = User.objects.filter(phone_number=serializer.validated_data["phone_number"]).first()
+        user = User.objects.filter(email=serializer.validated_data["email"]).first()
         if user is None:
             raise ValidationError({"code": "Invalid or expired verification code."})
 

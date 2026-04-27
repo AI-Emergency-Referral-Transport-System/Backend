@@ -8,8 +8,8 @@ from rest_framework.exceptions import ValidationError
 from accounts.services.sms_service import send_sms
 
 
-def _print_otp(phone_number: str, otp_code: str) -> None:
-    print(f"[OTP DEBUG] {phone_number}: {otp_code}")
+def _print_otp(identifier: str, otp_code: str) -> None:
+    print(f"[OTP DEBUG] {identifier}: {otp_code}")
 
 
 def _string_setting(name: str, default: str = "") -> str:
@@ -36,12 +36,12 @@ def send_otp_notification(user, otp_code: str) -> None:
     if configured_backend:
         backend = configured_backend
     else:
-        backend = "sms" if _string_setting("SMS_PROVIDER", "").strip() else "console"
+        backend = "email"
 
     message = f"Your verification code is: {otp_code}. It expires in 5 minutes."
 
     if backend == "console":
-        _print_otp(user.phone_number, otp_code)
+        _print_otp(user.email or "unknown", otp_code)
         return
 
     if backend == "sms":
@@ -63,7 +63,7 @@ def send_otp_notification(user, otp_code: str) -> None:
             fail_silently=False,
         )
         if _bool_setting("OTP_DEBUG_OUTPUT", False):
-            _print_otp(user.phone_number, otp_code)
+            _print_otp(user.email, otp_code)
         return
 
     raise ImproperlyConfigured(
