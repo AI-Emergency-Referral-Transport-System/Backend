@@ -11,11 +11,19 @@ class AmbulanceSerializer(serializers.ModelSerializer):
         fields = (
             "id",
             "plate_number",  
+            "ambulance_type",
+            "vehicle_model",
+            "vehicle_year",
+            "vehicle_color",
             "driver",
             "driver_name",   # Helper for Flutter UI
             "hospital",
             "hospital_name", # Helper for Flutter UI
             "status",
+            "equipment",
+            "phone",
+            "organization",
+            "verification_status",
             "current_location", # Required for Real-time tracking
             "created_at",
             "updated_at",
