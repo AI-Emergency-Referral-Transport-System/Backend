@@ -11,10 +11,10 @@ SECRET_KEY = os.getenv(
     "DJANGO_SECRET_KEY",
     "django-insecure-fw@*-olpidf^0ooir34+lbq^hdn-w%q$00-!*)5o5r+lpkd63#",
 )
-DEBUG = os.getenv("DJANGO_DEBUG", "True").strip().lower() == "true"
+DEBUG = os.getenv("DJANGO_DEBUG", "False").strip().lower() == "true"
 ALLOWED_HOSTS = [
     host.strip()
-    for host in os.getenv("DJANGO_ALLOWED_HOSTS", " ").split(",")
+    for host in os.getenv("DJANGO_ALLOWED_HOSTS", "non").split(",")
     if host.strip()
 ]
 
