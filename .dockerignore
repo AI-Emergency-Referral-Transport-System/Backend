@@ -1,0 +1,11 @@
+.git/
+.git/**
+.env
+__pycache__/
+*.pyc
+db.sqlite3
+.venv/
+.venv/**
+hs_err_pid*.log
+replay_pid*.log
+*.log
