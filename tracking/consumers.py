@@ -57,6 +57,20 @@ class AmbulanceTrackingConsumer(AsyncWebsocketConsumer):
 
         # Only update the ambulance belonging to the logged-in driver
         Ambulance.objects.filter(driver=self.user).update(current_location=new_point)
+        
+    @database_sync_to_async
+    
+    def record_movement(self, lat, lon):
+        emergency = Emergency.objects.get(id=self.emergency_id)
+        ambulance = Ambulance.objects.get(driver=self.user)
+
+        pnt = Point(float(lon), float(lat), srid=4326)
+
+        Location_Track.objects.create(
+            emergency=emergency,
+            ambulance=ambulance,
+            coordinates=pnt,
+        )
 
     # This method sends the broadcasted data to everyone in the room
     async def ambulance_location_update(self, event):
@@ -117,18 +131,4 @@ class HospitalNotificationConsumer(AsyncWebsocketConsumer):
             "eta": event.get("eta", "Calculating...")
         }))
 
-    # Helper method used by AmbulanceTrackingConsumer (keep it robust)
-    @database_sync_to_async
-    def record_movement(self, lat, lon):
-        try:
-            emergency = Emergency.objects.get(id=self.emergency_id)
-           
-            pnt = Point(float(lon), float(lat), srid=4326)
-            
-            Location_Track.objects.create(
-                emergency=emergency,
-                ambulance=emergency.ambulance,
-                coordinates=pnt
-            )
-        except Exception:
-            pass
+  
